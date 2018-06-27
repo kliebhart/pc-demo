@@ -1,0 +1,172 @@
+
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Policy Texts</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.5/require.min.js"></script>
+  <script src="../../uimWebSdk.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+  <script>
+
+  demoApp = {};
+  var uimWebSdk = null;
+
+  var cleanForm = function(formElement) {
+    formElement.innerHtml = "";
+    while(formElement.firstChild){
+       formElement.removeChild(formElement.firstChild);
+    }
+  }
+
+  var renderPolicyElements = function (policiesRendering, formId) {
+     var formElement = document.getElementById(formId);
+     cleanForm(formElement);
+     for (var i = 0; i < policiesRendering.length; i++) {
+       var div = document.createElement('div');
+       div.setAttribute('class', 'mui-checkbox');
+       var checkbox = document.createElement('input');
+       checkbox.setAttribute('type', 'checkbox');
+       checkbox.setAttribute('id', policiesRendering[i].ids.join('_and_'));
+       if (!policiesRendering[i].checkbox) {
+         checkbox.setAttribute('hidden', true);
+         checkbox.setAttribute('checked', true);
+       }
+       div.appendChild(checkbox);
+       var label = document.createElement('label');
+       label.innerHTML = policiesRendering[i].text;
+       div.appendChild(label);
+       formElement.appendChild(div);
+     }
+   };
+
+   var renderNewsletterElements = function (newsletters, formId) {
+     var formElement = document.getElementById(formId);
+     cleanForm(formElement);
+     for (var i = 0; i < newsletters.length; i++) {
+       var div = document.createElement('div');
+       div.setAttribute('class', 'mui-checkbox');
+       var checkbox = document.createElement('input');
+       checkbox.setAttribute('type', 'checkbox');
+       checkbox.setAttribute('id', newsletters[i].id);
+       div.appendChild(checkbox);
+       var label = document.createElement('label');
+       label.innerHTML = newsletters[i].text;
+       div.appendChild(label);
+       formElement.appendChild(div);
+     }
+   };
+
+
+   var workflowErrorCallback = function (error) {
+     reload(error.message);
+   };
+
+   var errorHandler = function (error) {
+         console.log(error);
+   };
+
+   var changeSettings = function () {
+	   initUIM();
+   };
+
+   var changeFormItems = function(baseUrl) {
+
+     var lang = document.getElementById("language").value;
+     var country = document.getElementById("country").value;
+     var formAlias = document.getElementById("formAlias").value;
+     var formUrl =  baseUrl + "/api/forms/" + formAlias + "/items?language="+lang+"&country="+country;
+	 var sdkVersion = "v14";
+     var acceptHeader = "application/vnd.rb.uim-" + sdkVersion + "+json";
+
+     console.log("Getting formItems using country: " + country + ", language: " + lang + ", acceptHeader " + acceptHeader + " and URL: " + formUrl);
+
+     $.ajax({
+       url: formUrl,
+       headers: {
+                  "Accept": acceptHeader
+                },
+       success: function(r) {
+          console.log("Received formDefinition: " + r);
+          renderPolicyElements(r.policyRenderings, "formPoliciesDiv");
+          renderNewsletterElements(r.newsletters, "formNewslettersDiv");
+       }
+     });
+
+   };
+
+   var changeRegistrationItems = function(uimApi) {
+     uimApi.getRegistrationItems().then(function (registrationItems) {
+         renderPolicyElements(registrationItems.policiesRendering, 'registerPoliciesDiv');
+         renderNewsletterElements(registrationItems.newsletters, 'registerNewslettersDiv');
+      }).catch(errorHandler);
+   };
+
+   var initUIM = function() {
+
+	 var env = "design";
+     var appId = document.getElementById("applicationId").value;
+     var lang = document.getElementById("language").value;
+     var country = document.getElementById("country").value;
+     console.log("Initialising UIM with appId: " + appId + ", env: " + env + ", lang: " + lang + ", and country: " + country);
+
+     var uimApiPromise = uimWebSdk
+       .setupUimApi()
+       .withEnvironment(env)
+       .withApplicationId(appId)
+       .withCountry(country)
+       .withLanguage(lang)
+       .onNewMandatoryInformation(errorHandler)
+       .onNewPasswordRequired(errorHandler)
+       .onWorkflowError(workflowErrorCallback).initialize();
+
+     uimApiPromise.then(function (uimApi) {
+       changeRegistrationItems(uimApi);
+       changeFormItems(uimApi.options.server);
+
+     }).catch(errorHandler);
+
+
+   };
+
+
+   require(['@uim/web-sdk'], function (uimWebSdkParam) {
+         uimWebSdk = uimWebSdkParam;
+         initUIM();
+   });
+
+  </script>
+</head>
+<body>
+
+<form id="appParams">
+
+  ApplicationId: <input type="text" id="applicationId" value="55a61a30945dd21cec9f2001"></input>
+  <br/>
+  Language: <input type="text" id="language" value="en"></input>
+  <br/>
+  Country: <input type="text" id="country" value="ZZ"></input>
+  <br/>
+  FormAlias: <input type="text" id="formAlias" value="integration_test_form"></input>
+  <br/>
+
+  <button type="button" class="mui-btn mui-btn--raised mui-btn--primary"
+          onclick="changeSettings()">Change Settings
+  </button>
+
+</form>
+
+<form id="registerForm" class="mui-form">
+  <h2>Registration Items</h2>
+  <div id="registerPoliciesDiv"></div>
+  <br/>
+  <div id="registerNewslettersDiv"></div>
+  <br/>
+  <h2>Form Items</h2>
+  <div id="formPoliciesDiv"></div>
+  <br/>
+  <div id="formNewslettersDiv"></div>
+</form>
+
+
+</body>
+</html>
