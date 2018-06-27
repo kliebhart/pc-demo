@@ -1,17 +1,11 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta charset="UTF-8">
-    <title>Home | Red Bull Policy Center</title>
-    <meta name="description" content="">
-    <script src="https://fonts.redbullmediahouse.com/ynd0iui.js"></script>
-    <script>try{Typekit.load({ async: true });}catch(e){}</script>
-    <link rel="stylesheet" href="../../../../resources/css/styles.min.css">
-    <link rel="stylesheet" href="../../../../resources/css/themes/rb.css">
-    <link href="//redbull.com/cs/RedBull2/images/favicon.ico" rel="shortcut icon">
+    <title>Demo | Red Bull Policy Center</title>
+
 
     <script>
   window.dataLayer = window.dataLayer || [];
@@ -33,113 +27,168 @@
     <!-- <script src="https://policies-design.redbull.com/rbcookieconsent/2/cookieconsent.min.js" type="text/javascript"></script> -->
 
     <!-- Latest Version -->
-    <script src="https://policies-design.redbull.com/rbcookieconsent/2.4.2/cookieconsent.min.js" type="text/javascript"></script>
+    <!-- <script src="https://policies-design.redbull.com/rbcookieconsent/2.4.2/cookieconsent.min.js" type="text/javascript"></script> -->
 
     <!-- Forms API UIM -->
-    <script src="https://uim-design.redbull.com/static/uim-web-sdk/3.5/uimWebSdk.js"></script>
+    <script src="https://uim.redbull.com/static/uim-web-sdk/3.5/uimWebSdk.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.5/require.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script>
+
+  demoApp = {};
+  var uimWebSdk = null;
+
+  var cleanForm = function(formElement) {
+    formElement.innerHtml = "";
+    while(formElement.firstChild){
+       formElement.removeChild(formElement.firstChild);
+    }
+  }
+
+  var renderPolicyElements = function (policiesRendering, formId) {
+     var formElement = document.getElementById(formId);
+     cleanForm(formElement);
+     for (var i = 0; i < policiesRendering.length; i++) {
+       var div = document.createElement('div');
+       div.setAttribute('class', 'mui-checkbox');
+       var checkbox = document.createElement('input');
+       checkbox.setAttribute('type', 'checkbox');
+       checkbox.setAttribute('id', policiesRendering[i].ids.join('_and_'));
+       if (!policiesRendering[i].checkbox) {
+         checkbox.setAttribute('hidden', true);
+         checkbox.setAttribute('checked', true);
+       }
+       div.appendChild(checkbox);
+       var label = document.createElement('label');
+       label.innerHTML = policiesRendering[i].text;
+       div.appendChild(label);
+       formElement.appendChild(div);
+     }
+   };
+
+   var renderNewsletterElements = function (newsletters, formId) {
+     var formElement = document.getElementById(formId);
+     cleanForm(formElement);
+     for (var i = 0; i < newsletters.length; i++) {
+       var div = document.createElement('div');
+       div.setAttribute('class', 'mui-checkbox');
+       var checkbox = document.createElement('input');
+       checkbox.setAttribute('type', 'checkbox');
+       checkbox.setAttribute('id', newsletters[i].id);
+       div.appendChild(checkbox);
+       var label = document.createElement('label');
+       label.innerHTML = newsletters[i].text;
+       div.appendChild(label);
+       formElement.appendChild(div);
+     }
+   };
+
+
+   var workflowErrorCallback = function (error) {
+     reload(error.message);
+   };
+
+   var errorHandler = function (error) {
+         console.log(error);
+   };
+
+   var changeSettings = function () {
+	   initUIM();
+   };
+
+   var changeFormItems = function(baseUrl) {
+
+     var lang = document.getElementById("language").value;
+     var country = document.getElementById("country").value;
+     var formAlias = document.getElementById("formAlias").value;
+     var formUrl =  baseUrl + "/api/forms/" + formAlias + "/items?language="+lang+"&country="+country;
+	 var sdkVersion = "v14";
+     var acceptHeader = "application/vnd.rb.uim-" + sdkVersion + "+json";
+
+     console.log("Getting formItems using country: " + country + ", language: " + lang + ", acceptHeader " + acceptHeader + " and URL: " + formUrl);
+
+     $.ajax({
+       url: formUrl,
+       headers: {
+                  "Accept": acceptHeader
+                },
+       success: function(r) {
+          console.log("Received formDefinition: " + r);
+          renderPolicyElements(r.policyRenderings, "formPoliciesDiv");
+          renderNewsletterElements(r.newsletters, "formNewslettersDiv");
+       }
+     });
+
+   };
+
+   var changeRegistrationItems = function(uimApi) {
+     uimApi.getRegistrationItems().then(function (registrationItems) {
+         renderPolicyElements(registrationItems.policiesRendering, 'registerPoliciesDiv');
+         renderNewsletterElements(registrationItems.newsletters, 'registerNewslettersDiv');
+      }).catch(errorHandler);
+   };
+
+   var initUIM = function() {
+
+	 var env = "design";
+     var appId = document.getElementById("applicationId").value;
+     var lang = document.getElementById("language").value;
+     var country = document.getElementById("country").value;
+     console.log("Initialising UIM with appId: " + appId + ", env: " + env + ", lang: " + lang + ", and country: " + country);
+
+     var uimApiPromise = uimWebSdk
+       .setupUimApi()
+       .withEnvironment(env)
+       .withApplicationId(appId)
+       .withCountry(country)
+       .withLanguage(lang)
+       .onNewMandatoryInformation(errorHandler)
+       .onNewPasswordRequired(errorHandler)
+       .onWorkflowError(workflowErrorCallback).initialize();
+
+     uimApiPromise.then(function (uimApi) {
+       changeRegistrationItems(uimApi);
+       changeFormItems(uimApi.options.server);
+
+     }).catch(errorHandler);
+
+
+   };
+
+
+   require(['@uim/web-sdk'], function (uimWebSdkParam) {
+         uimWebSdk = uimWebSdkParam;
+         initUIM();
+   });
+
+  </script>
 </head>
 <body>
 
-<!-- Header -->
-<div class="policy-header" role="banner">
-    <div class="policy-header__hero policy-header__hero--home"></div>
-    <div class="container container--fluid">
-        <div class="row">
-            <div class="row__col row__col--header row__col--xs-20">
-                <a class="logo logo--header" href="index.html">
-                    <span class="logo__img" title="Red Bull"></span>
-                </a>
-                <div class="hashtag">
-                    <span class="hashtag__label"><span class="hashtag__label-rb"></span>POLICY CENTER</span>
-                </div>
-            </div>
-            <div class="row__col row__col--xs-2">
-                <a class="nav-trigger" id="nav-trigger" href="javascript:void(0)">
-                        <span class="nav-trigger__icon">
-                            <span></span>
-                        </span>
-                </a>
-            </div>
-        </div>
-        <div class="row clearfix">
-            <div class="row__col row__col--sm-20 row__col--sm-push-1 row__col--md-10 row__col--md-push-6">
-                <div class="policy-header__h1">POLICY CENTER</div>
-            </div>
-        </div>
-    </div>
-</div>
+<form id="appParams">
 
-<!-- Navigation -->
-<div class="policy-navbar" id="policy-navbar">
-    <div class="container container--fluid">
-        <div class="row">
-            <div class="row__col row__col--sm-22">
-                <nav class="nav nav--primary" id="nav--primary" role="navigation">
-                    <ul class="nav__items">
-                        <li class="nav__item">
-                            <a href="https://policies.redbull.com/r/RedBull.com_International/terms/en" title="Terms of Use"><span>Terms & Conditions</span></a>
-                        </li>
-                        <li class="nav__item">
-                            <a href="https://policies.redbull.com/r/RedBull.com_International/privacy/en" title="Privacy Policy"><span>Privacy Policy</span></a>
-                        </li>
-                        <li class="nav__item">
-                            <a href="https://policies.redbull.com/r/RedBull.com_International/cookie/en" title="Cookies Policy"><span>Cookies Policy</span></a>
-                        </li>
-                        <li class="nav__item">
-                            <a href="https://policies.redbull.com/r/RedBull.com_International/imprint/en" title="Imprint"><span>Imprint</span></a>
-                        </li>
-                    </ul>
-                </nav>
-            </div>
-        </div>
-    </div>
-</div>
+    ApplicationId: <input type="text" id="applicationId" value="5846b243958b0b3fb6b1908e"></input>
+    <br/>
+    Language: <input type="text" id="language" value="en"></input>
+    <br/>
+    Country: <input type="text" id="country" value="ZZ"></input>
+    <br/>
+    FormAlias: <input type="text" id="formAlias" value="rb3_newsletter_subscription"></input>
+    <br/>
 
-<!-- Content -->
-<div class="container container--fluid">
-    <div class="row">
-        <div class="row__col row__col--sm-20 row__col--sm-push-1 row__col--md-10 row__col--md-push-6">
-            <div class="policy-content" role="main">
-                <?php
-                  include "../cookiebanner.html";
-                  include "../consentpicker.html";
-                ?>
-            </div>
-        </div>
-    </div>
-</div>
+    <button type="button" class="mui-btn mui-btn--raised mui-btn--primary"
+            onclick="changeSettings()">Change Settings
+    </button>
 
-<!-- Footer -->
-<div class="policy-footer">
-    <div class="container container--fluid">
-        <div class="row">
-            <div class="row__col row__col--sm-4">
-                <a class="logo logo--footer" href="index.html">
-                    <span class="logo__img" title="Red Bull"></span>
-                </a>
-            </div>
-            <div class="row__col row__col--sm-18">
+</form>
 
-                <nav class="nav nav--footer" id="nav--footer" role="navigation">
-                    <ul class="nav__items">
-                        <li class="nav__item" >
-                            <a href="http://www.redbull.com" title="Visit RedBull.com"><span>Visit RedBull.com</span></a>
-                        </li>
-                        <li class="nav__item" >
-                            <a href="http://www.redbull.tv" title="Watch RedBull.tv"><span>Watch RedBull.tv</span></a>
-                        </li>
-                        <li class="nav__item" >
-                            <a href="mailto:privacy@redbull.com" title="Contact"><span>Contact</span></a>
-                        </li>
-                    </ul>
-                </nav>
-                <span class="policy-footer__copyright">&copy; 2018 Red Bull </span>
-            </div>
-        </div>
-    </div>
-</div>
+<form id="registerForm" class="mui-form">
+    <h2>Registration Items</h2>
+    <h2>Form Items</h2>
+    <div id="formPoliciesDiv"></div>
+    <br/>
+    <div id="formNewslettersDiv"></div>
+</form>
 
-<!-- Scripts -->
-<script src="../../../../resources/js/scripts.js"></script>
 </body>
 </html>
